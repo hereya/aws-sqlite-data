@@ -1,0 +1,36 @@
+{
+  "name": "hereya-aws-sqlite-data",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Hereya package hereya/aws-sqlite-data: CDK stack + SQLite Data API service",
+  "type": "module",
+  "scripts": {
+    "ensure-node": "node scripts/ensure-node.mjs",
+    "ensure-litestream": "node scripts/ensure-litestream.mjs",
+    "test": "npm run ensure-node --silent && .toolchain/node/bin/node --test 'service/test/**/*.test.ts' 'test/*.test.ts'",
+    "test:unit": "npm run ensure-node --silent && .toolchain/node/bin/node --test 'service/test/unit/*.test.ts'",
+    "typecheck": "tsc --noEmit",
+    "build-service": "node scripts/build-service.mjs"
+  },
+  "devDependencies": {
+    "@aws-crypto/sha256-js": "^5.2.0",
+    "@aws-sdk/credential-provider-node": "^3.972.61",
+    "@smithy/protocol-http": "^5.5.5",
+    "@smithy/signature-v4": "^5.6.1",
+    "@types/node": "^24.0.0",
+    "aws-cdk": "^2.1129.0",
+    "aws-cdk-lib": "^2.170.0",
+    "constructs": "^10.4.2",
+    "esbuild": "^0.25.0",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.22.4",
+    "typescript": "^5.7.0"
+  },
+  "dependencies": {
+    "@aws-sdk/client-cloudwatch": "^3.1078.0",
+    "@aws-sdk/client-dynamodb": "^3.1078.0",
+    "@aws-sdk/client-secrets-manager": "^3.1079.0",
+    "@aws-sdk/client-servicediscovery": "^3.1078.0",
+    "@aws-sdk/util-dynamodb": "^3.996.5"
+  }
+}

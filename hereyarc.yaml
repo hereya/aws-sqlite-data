@@ -1,0 +1,11 @@
+name: hereya/aws-sqlite-data
+version: 0.1.0
+description: "Durable multi-tenant SQLite storage: S3-replicated (Litestream) per-app SQLite files served by an HTTP Data API on a self-healing EC2 Spot singleton, fronted by an IAM-authorized API Gateway. Pair with hereya/aws-sqlite-db for per-app provisioning."
+visibility: public
+iac: cdk
+infra: aws
+parameters:
+  capabilityEnforce:
+    description: "When 'true', the Data API REQUIRES a valid x-hereya-capability token on every data route (missing or invalid -> 403 CAPABILITY_DENIED). 'false' (default) = warn mode: the token is validated when present but a request without one is allowed (logging cap_missing). Flip to 'true' once every caller mints or holds tokens (hereya/aws-sqlite-db provisions one per app)."
+    mandatory: false
+    default: "false"

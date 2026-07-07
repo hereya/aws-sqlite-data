@@ -1,0 +1,8 @@
+{
+  "app": "npx tsx bin/hereya-aws-sqlite-data.ts",
+  "context": {
+    "@aws-cdk/aws-iam:minimizePolicies": true,
+    "@aws-cdk/core:checkSecretUsage": true,
+    "@aws-cdk/aws-ec2:restrictDefaultSecurityGroup": true
+  }
+}
