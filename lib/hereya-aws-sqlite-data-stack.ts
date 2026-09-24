@@ -21,6 +21,10 @@ import { execSync } from "node:child_process";
 import { cpSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { addAccessLog } from "./access-log.ts";
+import { PINNED_AMI_ID } from "./ami-pin.ts";
+import { resolveMachineImage } from "./machine-image.ts";
+import { serviceContentHash } from "./service-hash.ts";
 import { buildUserData } from "./user-data.ts";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -125,11 +129,18 @@ export class HereyaAwsSqliteDataStack extends cdk.Stack {
     ] as const) {
       httpApi.addRoutes({ path, methods: [method], integration });
     }
+    addAccessLog(this, httpApi);
 
     // --- Service artifact ----------------------------------------------------
     const artifact = new s3assets.Asset(this, "ServiceArtifact", {
       path: join(repoRoot, "service"),
-      assetHashType: cdk.AssetHashType.OUTPUT,
+      // Hash the service INPUTS, never the built tarball (CLAUDE.md inv. 8). The
+      // hash rides in the launch template, so it decides when CloudFormation
+      // replaces the database VM — and a hash of the non-reproducible
+      // service.tar.gz (builtAt + tar/gzip mtimes) would roll it on every
+      // deploy of anything. See lib/service-hash.ts.
+      assetHash: serviceContentHash(repoRoot),
+      assetHashType: cdk.AssetHashType.CUSTOM,
       bundling: {
         image: cdk.DockerImage.fromRegistry("public.ecr.aws/docker/library/node:24"),
         local: {
@@ -244,6 +255,7 @@ export class HereyaAwsSqliteDataStack extends cdk.Stack {
       buildUserData({
         awsRegion: this.region,
         artifactParamName: artifactParam.parameterName,
+        artifactHash: artifact.assetHash,
         serviceEnv: {
           NODE_ENV: "production",
           PORT: String(servicePort),
@@ -274,9 +286,9 @@ export class HereyaAwsSqliteDataStack extends cdk.Stack {
     );
 
     const launchTemplate = new ec2.LaunchTemplate(this, "LaunchTemplate", {
-      machineImage: ec2.MachineImage.latestAmazonLinux2023({
-        cpuType: ec2.AmazonLinuxCpuType.ARM_64,
-      }),
+      // PINNED, not a latest-AL2023 lookup (CLAUDE.md inv. 9): a lookup
+      // re-resolves at every deploy and rolls the VM when AWS publishes.
+      machineImage: resolveMachineImage(this, input("amiId", PINNED_AMI_ID).trim()),
       instanceType: new ec2.InstanceType(instanceType),
       role,
       securityGroup: instanceSg,
@@ -311,7 +323,20 @@ export class HereyaAwsSqliteDataStack extends cdk.Stack {
       },
       minCapacity: 1,
       maxCapacity: 1,
-      updatePolicy: autoscaling.UpdatePolicy.replacingUpdate(),
+      // Rolling update with minInstancesInService=0 = TERMINATE-BEFORE-LAUNCH:
+      // CloudFormation kills the old instance, then brings up the new one — the
+      // same sequence as the tested kill-instance recovery (~1 min gap), and the
+      // only order compatible with the litestream single-writer invariant. Do
+      // NOT switch back to replacingUpdate(): it runs old and new side by side
+      // on one replica path. What rolls the instance is therefore, by design,
+      // exactly two deliberate changes: a new SERVICE (the source hash in
+      // user-data) and a bumped AMI pin.
+      updatePolicy: autoscaling.UpdatePolicy.rollingUpdate({
+        maxBatchSize: 1,
+        minInstancesInService: 0,
+        pauseTime: cdk.Duration.seconds(0),
+        waitOnResourceSignals: false,
+      }),
       groupMetrics: [autoscaling.GroupMetrics.all()],
     });
     // Capacity rebalance must stay OFF: it launches the replacement while the

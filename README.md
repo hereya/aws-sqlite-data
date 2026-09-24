@@ -60,7 +60,9 @@ consumer Lambda ──SigV4──▶ API Gateway (HTTP API, IAM auth)
 Inputs (env/`-p`): `capabilityEnforce` (see hereyarc), `instanceType` (t4g.micro),
 `autoDelete`, `servicePort`, `sqlTimeoutMs`, `maxInflightPerApp`, `maxLiveWorkers`,
 `registryPollSeconds`, `litestreamSyncIntervalMs`, `litestreamRetention`,
-`telegramBotTokenParam` (SSM SecureString *name*), `telegramChatId`.
+`telegramBotTokenParam` (SSM SecureString *name*; a bare token or a JSON record with `bot_token`),
+`telegramChatId`, `amiId` (default = the pinned AL2023 arm64 image of eu-west-1; `latest` =
+auto-resolve at every deploy, which rolls the VM whenever AWS publishes).
 
 Outputs: `dataApiUrl`, `awsRegion`, `registryTableName`, `sqliteReplicaBucketName`,
 `capabilitySecretArn` (the HMAC secret provisioning packages mint tokens with),
@@ -79,6 +81,7 @@ npm install
 npm test              # unit + integration + CDK assertions (downloads Node 24 + litestream toolchain)
 npm run typecheck
 npm run build-service # dist/service.tar.gz (hermetic: pinned sha256 Node + litestream)
+npm run check:ami     # pinned AMI vs newest AL2023 (exit 0 current / 1 roll needed / 2 unknown)
 ```
 
 Local service without AWS: `REGISTRY_MODE=file REGISTRY_FILE=... LITESTREAM_DISABLED=1 DB_DIR=... node --experimental-strip-types service/src/main.ts` (or use the toolchain node).
@@ -94,6 +97,19 @@ node scripts/acceptance/noisy-neighbor.mjs <stackName>            # flood one ap
 ```
 
 ## Ops runbook
+
+- **What replaces the VM** (~1 min with no Data API; rolling update, terminate-before-launch):
+  exactly (a) a change to the service inputs (`service/**`, build script, node/litestream pins —
+  the hash line in user-data) and (b) a changed AMI (`PINNED_AMI_ID` / `amiId`). Anything else —
+  parameters outside user-data, alarms, the access log — deploys without touching the instance.
+- **Rolling the OS**: `npm run check:ami -- --stack <FULL stack name>`; if it exits 1, bump
+  `PINNED_AMI_ID` in `lib/ami-pin.ts` AND the `amiId` default in `hereyarc.yaml` to the id it
+  reports, release, deploy at an announced time.
+- **Explaining a 5xx**: the Data API stage writes a JSON access log (`HttpApiAccessLogs`, 7-day
+  retention): `routeKey`, `status`, `integrationStatus` (absent = the VM was never reached),
+  `integrationErrorMessage`, `sourceIp`.
+- **Alarm relay** (when the Telegram inputs are set): a brand-new alarm's INSUFFICIENT_DATA → OK is
+  suppressed (logged); only OK after a real ALARM is announced; each alarm has its own wording.
 
 - **Service-only update (no CDK)**: build `service.tar.gz`, upload to any readable S3 spot,
   update the `/<stack>/service-artifact` SSM parameter, then either restart the service via

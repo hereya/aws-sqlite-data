@@ -1,0 +1,5 @@
+{
+  "name": "heartbeat-relay",
+  "private": true,
+  "type": "commonjs"
+}
