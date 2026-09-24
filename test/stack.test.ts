@@ -3,18 +3,13 @@
 // capacity rebalance off, least-privilege role (never s3:*).
 import assert from "node:assert/strict";
 import { before, test } from "node:test";
-import * as cdk from "aws-cdk-lib";
 import { Match, Template } from "aws-cdk-lib/assertions";
-import { HereyaAwsSqliteDataStack } from "../lib/hereya-aws-sqlite-data-stack.ts";
+import { synthStack } from "./synth-helpers.ts";
 
 let template: Template;
 
 before(() => {
-  const app = new cdk.App();
-  const stack = new HereyaAwsSqliteDataStack(app, "TestStack", {
-    env: { account: "111111111111", region: "eu-west-1" },
-  });
-  template = Template.fromStack(stack);
+  template = Template.fromStack(synthStack("TestStack"));
 });
 
 test("replica bucket has NO lifecycle rules and NO versioning", () => {
@@ -121,14 +116,10 @@ test("telegram relay appears only when its inputs are set", () => {
   const relays = Object.keys(fns).filter((k) => k.startsWith("HeartbeatRelay"));
   assert.equal(relays.length, 0);
 
-  const app2 = new cdk.App();
   process.env.telegramBotTokenParam = "/hereya/test/telegram-token";
   process.env.telegramChatId = "12345";
   try {
-    const stack2 = new HereyaAwsSqliteDataStack(app2, "TestStackTg", {
-      env: { account: "111111111111", region: "eu-west-1" },
-    });
-    const template2 = Template.fromStack(stack2);
+    const template2 = Template.fromStack(synthStack("TestStackTg"));
     const fns2 = Object.keys(template2.findResources("AWS::Lambda::Function"));
     assert.ok(fns2.some((k) => k.startsWith("HeartbeatRelay")), "relay must exist with inputs set");
     template2.resourceCountIs("AWS::SNS::Subscription", 1);

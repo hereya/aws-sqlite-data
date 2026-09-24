@@ -4,6 +4,7 @@
 export interface UserDataParams {
   awsRegion: string;
   artifactParamName: string; // SSM parameter holding the artifact's S3 URI
+  artifactHash: string; // content hash of the service INPUTS — see the comment in the script
   serviceEnv: Record<string, string>; // written to /etc/hereya/data-api.env
 }
 
@@ -13,6 +14,11 @@ export function buildUserData(params: UserDataParams): string {
     .join("\n");
 
   return `#!/bin/bash
+# service-artifact-hash: ${params.artifactHash}
+# (inert, but load-bearing: a new service changes this line, which versions the
+# launch template and makes the ASG's rolling update replace the instance - so a
+# deploy actually rolls the service. Without it the SSM pointer updates and the
+# running instance keeps serving the old artifact.)
 set -euo pipefail
 exec > >(tee /var/log/hereya-bootstrap.log) 2>&1
 echo "hereya-data-api bootstrap starting"

@@ -27,12 +27,38 @@ runbook; this file is the working-agreement layer for agents.
 4. **No S3 lifecycle rules / versioning on the replica bucket** — Litestream owns retention.
    Template test enforces it.
 5. **Capacity rebalance OFF** on the ASG — replacement-before-terminate would run two
-   litestream writers on one generation path.
+   litestream writers on one generation path. Same reason the update policy is a **rolling
+   update with `minInstancesInService: 0`** (terminate-before-launch, since 0.1.1): never switch
+   it back to `replacingUpdate()`, which runs old and new instances side by side on one replica.
 6. **Wire shapes mirror the RDS Data API** (`SqlParameter[]`, `records`/`columnMetadata`/
    `numberOfRecordsUpdated`, `Field` union incl. base64 `blobValue`; INTEGER beyond ±2^53 →
    `stringValue`) so callers' `convertParams`/`extractFieldValue` round-trip unchanged.
 7. **SQL guards are duplicated by design**: ATTACH/DETACH, `VACUUM INTO`, PRAGMA outside the
    read-only allowlist are rejected HERE even when a caller also rejects them.
+8. **A NEW SERVICE rolls the instance — a new BUILD must not** (0.1.1, upstream 0.1.8/0.1.10).
+   The `# service-artifact-hash:` line in `buildUserData` is an inert comment but load-bearing:
+   it versions the launch template, so a changed hash makes the rolling update replace the
+   instance (~1 min with no Data API). The hash is `serviceContentHash()` (`lib/service-hash.ts`):
+   `service/**` (tests included) + `scripts/build-service.mjs` + the pinned node/litestream versions
+   and `pins.json` — **never** the built tarball (`AssetHashType.OUTPUT`), which is not
+   reproducible and rolled upstream's VM on every deploy of anything. `test/service-hash.test.ts`
+   and `test/rollout.test.ts` pin it. The SSM artifact pointer stays the emergency path.
+9. **The AMI is a constant, not a lookup** (0.1.1, upstream 0.1.11–0.1.12).
+   `latestAmazonLinux2023()` re-resolves at every deploy and replaced the VM on the first deploy
+   after each AWS publication. The id lives in `PINNED_AMI_ID` (`lib/ami-pin.ts`) and reaches the
+   launch template through `resolveMachineImage()`; the hereyarc `amiId` default MUST equal it
+   (Hereya passes the default as env, which overrides the constant — a test enforces equality).
+   `amiId=latest` restores auto-resolution. **`npm run check:ami`** is the half that makes the pin
+   safe: exit 1 when a newer AL2023 exists (or `--stack <FULL name>` finds the instance on neither
+   image), exit 2 — never 0 — when it cannot tell. The 0.1.1 pin is `ami-0390cc9c657024910`, the
+   image the production VM has run since 2026-07-07, so pinning alone rolls nothing; moving it is
+   a deliberate, announced release. With 8 and 9, only a new service or a bumped pin roll the VM.
+10. **One restore per db path, one litestream replicate process** (0.1.1, upstream 0.1.26/0.1.40).
+    `Restorer` (`service/src/litestream/restore.ts`) shares an in-flight restore between callers
+    (`ensureServed` and the registry reconcile used to race: "output path already exists" 503s).
+    `Litestream.bounce()`/`stop()` are serialized: two overlapping bounces used to orphan a second
+    `litestream replicate` process — a dual writer. `service/test/unit/{restore,bounce}-race.test.ts`
+    pin both and were verified to fail on 0.1.0.
 
 ## Working on it
 
@@ -51,6 +77,9 @@ runbook; this file is the working-agreement layer for agents.
 - Deploy for dev: `AWS_PROFILE=<p> AWS_REGION=eu-west-1 STACK_NAME=<name> autoDelete=true
   npx cdk deploy` — with `autoDelete=true`, `cdk destroy` removes bucket + table too.
 - Release: bump `hereyarc.yaml` version → commit → tag `v<version>` → push → `hereya publish`.
+- Stack test files synth under a cross-process lock (`test/synth-helpers.ts` → `synthStack()`):
+  the runner executes files in parallel and every synth runs `build-service.mjs` into the shared
+  `dist/`. Build stacks in tests through `synthStack`, never `new HereyaAwsSqliteDataStack` directly.
 
 ## Observed behaviors (dev acceptance, 2026-07-02, upstream)
 
