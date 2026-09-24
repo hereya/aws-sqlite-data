@@ -1,5 +1,5 @@
 name: hereya/aws-sqlite-data
-version: 0.1.1
+version: 0.1.2
 description: "Durable multi-tenant SQLite storage: S3-replicated (Litestream) per-app SQLite files served by an HTTP Data API on a self-healing EC2 Spot singleton, fronted by an IAM-authorized API Gateway. Pair with hereya/aws-sqlite-db for per-app provisioning."
 visibility: public
 iac: cdk
@@ -10,6 +10,6 @@ parameters:
     mandatory: false
     default: "false"
   amiId:
-    description: "AMI of the database VM. Pinned by default to ami-0390cc9c657024910 (AL2023 kernel-6.1 arm64, eu-west-1), so that an ordinary deploy NEVER replaces the instance (a replacement = ~60s with no Data API). Bump PINNED_AMI_ID in lib/ami-pin.ts, or pass an id here, to move the OS deliberately; npm run check:ami says when a newer AL2023 exists. latest restores auto-resolution of the newest AL2023 arm64 image at every deploy (and with it the surprise replacement); outside eu-west-1, latest or a region-local id is required."
+    description: "AMI of the database VM. Pinned by default to ami-06f589fd2af7a9fc7 (AL2023 kernel-6.1 arm64, eu-west-1), so that an ordinary deploy NEVER replaces the instance (a replacement = ~60s with no Data API). Bump PINNED_AMI_ID in lib/ami-pin.ts, or pass an id here, to move the OS deliberately; npm run check:ami says when a newer AL2023 exists. latest restores auto-resolution of the newest AL2023 arm64 image at every deploy (and with it the surprise replacement); outside eu-west-1, latest or a region-local id is required."
     mandatory: false
-    default: "ami-0390cc9c657024910"
+    default: "ami-06f589fd2af7a9fc7"

@@ -295,6 +295,27 @@ export class HereyaAwsSqliteDataStack extends cdk.Stack {
       userData,
       requireImdsv2: true,
       associatePublicIpAddress: true,
+      // The root volume, STATED instead of inherited from the AMI (upstream
+      // 0.1.30/0.1.31). The device name MUST be the AMI's own root device
+      // (`/dev/xvda` on AL2023 arm64): any other name ADDS a second volume
+      // and the databases stay on the old, unencrypted root.
+      //
+      // Encrypted at rest with the account's AWS-managed `aws/ebs` key
+      // (kmsKey left unset on purpose): its key policy already lets the Auto
+      // Scaling service-linked role launch from it, where a customer-managed
+      // key would need an explicit grant and fail every launch without one.
+      // The S3 replica was always encrypted; now the original is too.
+      // 8 GB = the size the AMI already gave it (the data is small).
+      blockDevices: [
+        {
+          deviceName: "/dev/xvda",
+          volume: ec2.BlockDeviceVolume.ebs(8, {
+            volumeType: ec2.EbsDeviceVolumeType.GP3,
+            deleteOnTermination: true,
+            encrypted: true,
+          }),
+        },
+      ],
       // Spot-ness lives in the ASG's MixedInstancesPolicy below (a launch
       // template with InstanceMarketOptions conflicts with mixed instances).
       // no keyPair: SSM Session Manager only (spec §3)

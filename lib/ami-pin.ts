@@ -18,19 +18,18 @@
 export const PINNED_AMI_REGION = "eu-west-1";
 
 /**
- * AL2023, kernel 6.1, arm64, eu-west-1. This is the image the production
- * consumer of this package has run since
- * 2026-07-07 — the id its launch template resolved at its last deploy. Pinning
- * that exact id is what makes release 0.1.1 change the platform, not the OS:
- * the pin alone produces the same ImageId as what is deployed.
+ * AL2023, kernel 6.1, arm64, eu-west-1: `al2023-ami-2023.12.20260918.0`,
+ * taken from a fresh `npm run check:ami` on 2026-09-24 (0.1.2). Previous pin:
+ * `ami-0390cc9c657024910`, the image the production VM had run since 2026-07-07,
+ * pinned as-is in 0.1.1 so that introducing the pin rolled nothing.
  *
- * It is deliberately behind the newest AL2023 (`npm run check:ami` says so and
- * exits 1). Rolling it is RELEASE B: `npm run check:ami`, bump this constant to
- * the id it reports, publish, deploy, announce. Rolling replaces the VM (~1 min
- * with no Data API), so it is a dated, announced act, never a side effect.
- * Take the id from a FRESH `check:ami` — Amazon has republished within a day.
+ * To roll the OS: `npm run check:ami`, bump this constant AND the `amiId`
+ * default in hereyarc.yaml to the id it reports, publish, deploy, announce.
+ * Rolling replaces the VM (~1 min with no Data API), so it is a dated,
+ * announced act, never a side effect. Take the id from a FRESH `check:ami` —
+ * Amazon has republished within a day.
  */
-export const PINNED_AMI_ID = "ami-0390cc9c657024910";
+export const PINNED_AMI_ID = "ami-06f589fd2af7a9fc7";
 
 /**
  * The SSM public parameter the pin is measured against. It MUST stay the same

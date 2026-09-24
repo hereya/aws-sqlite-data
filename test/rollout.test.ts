@@ -111,3 +111,12 @@ test("the Data API stage writes an access log that says WHICH call failed and WH
   assert.equal(group.Properties.RetentionInDays, 7);
   assert.equal(group.DeletionPolicy, "Delete");
 });
+
+test("the root volume is stated: /dev/xvda, encrypted with aws/ebs, gp3 — never a second volume", () => {
+  const bdm = launchTemplateData(template).BlockDeviceMappings;
+  assert.equal(bdm.length, 1, "exactly one mapping — a second one would ADD a volume, not replace the root");
+  assert.equal(bdm[0].DeviceName, "/dev/xvda");
+  assert.equal(bdm[0].Ebs.Encrypted, true);
+  assert.equal(bdm[0].Ebs.VolumeType, "gp3");
+  assert.equal(bdm[0].Ebs.KmsKeyId, undefined, "aws/ebs (AWS-managed) on purpose — a CMK needs an ASG grant");
+});

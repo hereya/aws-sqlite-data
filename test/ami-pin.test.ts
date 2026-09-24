@@ -177,10 +177,9 @@ test("the pin is measured against the parameter it was taken from", () => {
   assert.equal(PINNED_AMI_REGION, "eu-west-1");
 });
 
-test("the pin is the image the production VM already runs — pinning alone rolls nothing", () => {
-  // Release 0.1.1 introduces the pin. Its value MUST equal what the deployed
-  // launch template resolved (ami-0390cc9c657024910, in service since
-  // 2026-07-07), or the first deploy of this release would replace the VM for
-  // an OS change nobody chose. Moving it is release B, deliberately.
-  assert.equal(PINNED_AMI_ID, "ami-0390cc9c657024910");
+test("the pin moves only on purpose — 0.1.2 is the dated OS roll", () => {
+  // 0.1.1 pinned the image already in service (ami-0390cc9c657024910) so that
+  // introducing the pin rolled nothing. 0.1.2 is the deliberate roll to the
+  // AL2023 of 2026-09-18. Changing this line is changing the production OS.
+  assert.equal(PINNED_AMI_ID, "ami-06f589fd2af7a9fc7");
 });

@@ -1,6 +1,6 @@
 {
   "name": "hereya-aws-sqlite-data",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "description": "Hereya package hereya/aws-sqlite-data: CDK stack + SQLite Data API service",
   "type": "module",
