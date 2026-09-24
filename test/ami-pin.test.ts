@@ -99,7 +99,7 @@ test("every verdict renders one actionable sentence", () => {
 // The instance lookup, and the exit code it feeds.
 //
 // Regression guarded (2026-08-05): the sweep had been running with a TRUNCATED
-// stack name, `p-263b1e67` instead of `p-263b1e67-4f7d-498a-8f5a-8635f2e68a87`.
+// stack name, `p-0000abcd` instead of `p-0000abcd-0000-4000-8000-000000000000`.
 // The tag filter is an exact match, so it selected nothing; the script turned
 // that empty result into the same `null` it used for "no permission", printed a
 // parenthetical, and exited 0. The `instance-stale` branch — the half that
@@ -113,14 +113,14 @@ const BEHIND = amiPinStatus({ pinned: AMI_B, latest: AMI_A });
 const UNKNOWN = amiPinStatus({ pinned: AMI_A, latest: null });
 
 test("a --stack that matches nothing NEVER exits 0", () => {
-  const lookup = { state: "no-match", stackName: "p-263b1e67" } as const;
+  const lookup = { state: "no-match", stackName: "p-0000abcd" } as const;
   assert.equal(exitCodeFor(CURRENT, lookup), 2);
   // …and it says WHY, naming exact-match as the cause rather than blaming
   // credentials — the misdiagnosis that cost us four weeks of the check.
   const line = describeLookup(lookup);
   assert.match(line, /exact match/);
   assert.match(line, /NOT checked/);
-  assert.ok(line.includes("p-263b1e67"), "must name the stack it was given");
+  assert.ok(line.includes("p-0000abcd"), "must name the stack it was given");
 });
 
 test("a --stack that could not be read NEVER exits 0 either", () => {
