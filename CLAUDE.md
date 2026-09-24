@@ -60,6 +60,13 @@ runbook; this file is the working-agreement layer for agents.
     `litestream replicate` process — a dual writer. `service/test/unit/{restore,bounce}-race.test.ts`
     pin both and were verified to fail on 0.1.0.
 
+11. **litestream.yml is the 0.5.x schema** (0.1.3, upstream 0.1.4/0.1.32; Litestream v0.5.17).
+    Snapshot cadence/retention live in the GLOBAL `snapshot:` block and each db has one `replica:`.
+    0.5 config parsing is non-strict: replica-level `retention:`/`snapshot-interval:` (the 0.3
+    schema) are silently dropped and the restore window shrinks from 72h to 24h with no error.
+    `service/test/unit/litestream-config.test.ts` locks the output and parses it with the real
+    binary; `scripts/acceptance/restore-legacy-0-3{,-local}.mjs` prove 0.5 restores a 0.3 replica.
+
 ## Working on it
 
 - `npm test` = unit + integration (in-process boots, real litestream with `file://` replicas)

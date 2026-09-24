@@ -14,9 +14,14 @@ const stampFile = join(toolchainDir, "litestream.version");
 const VERSION = readFileSync(join(root, "scripts", "litestream-version.txt"), "utf8").trim();
 
 const platform = process.platform === "darwin" ? "darwin" : "linux";
-const archName = process.arch === "arm64" ? "arm64" : "amd64";
-const ext = platform === "darwin" ? "zip" : "tar.gz";
-const asset = `litestream-${VERSION}-${platform}-${archName}.${ext}`;
+// Release asset naming changed between the 0.3.x and 0.5.x lines:
+//   0.3.x: litestream-v0.3.14-darwin-arm64.zip  (v-prefixed; zip on darwin; amd64)
+//   0.5.x: litestream-0.5.17-darwin-arm64.tar.gz (bare version; tar.gz everywhere; x86_64)
+const major05 = /^v0\.[5-9]|^v[1-9]/.test(VERSION);
+const archName = process.arch === "arm64" ? "arm64" : major05 ? "x86_64" : "amd64";
+const ext = platform === "darwin" && !major05 ? "zip" : "tar.gz";
+const assetVersion = major05 ? VERSION.replace(/^v/, "") : VERSION;
+const asset = `litestream-${assetVersion}-${platform}-${archName}.${ext}`;
 const url = `https://github.com/benbjohnson/litestream/releases/download/${VERSION}/${asset}`;
 
 function ok() {

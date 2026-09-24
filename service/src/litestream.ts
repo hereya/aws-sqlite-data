@@ -63,14 +63,23 @@ export class Litestream {
 
   buildConfig(apps: LitestreamApp[]): string {
     const interval = `${this.cfg.litestreamSyncIntervalMs}ms`;
-    const lines: string[] = ["dbs:"];
+    // 0.5.x schema (backported from upstream dilaya/aws-sqlite-data 0.1.4):
+    // snapshots are configured globally (per-db values must not conflict
+    // anyway), and each db takes a single `replica:` — the legacy
+    // replica-level `retention:`/`snapshot-interval:` keys are silently
+    // IGNORED by 0.5.x (config parsing is non-strict), so keeping them would
+    // shrink the restore window to the 24h defaults without any error.
+    const lines: string[] = [
+      "snapshot:",
+      `  interval: ${this.cfg.litestreamSnapshotInterval}`,
+      `  retention: ${this.cfg.litestreamRetention}`,
+      "dbs:",
+    ];
     for (const app of apps) {
       lines.push(`  - path: ${app.dbPath}`);
-      lines.push(`    replicas:`);
-      lines.push(`      - url: ${this.replicaUrl(app)}`);
-      lines.push(`        sync-interval: ${interval}`);
-      lines.push(`        retention: ${this.cfg.litestreamRetention}`);
-      lines.push(`        snapshot-interval: ${this.cfg.litestreamSnapshotInterval}`);
+      lines.push(`    replica:`);
+      lines.push(`      url: ${this.replicaUrl(app)}`);
+      lines.push(`      sync-interval: ${interval}`);
     }
     if (apps.length === 0) lines.push("  []");
     return lines.join("\n") + "\n";
