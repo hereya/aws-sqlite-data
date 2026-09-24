@@ -1,5 +1,5 @@
 name: hereya/aws-sqlite-data
-version: 0.1.2
+version: 0.1.3
 description: "Durable multi-tenant SQLite storage: S3-replicated (Litestream) per-app SQLite files served by an HTTP Data API on a self-healing EC2 Spot singleton, fronted by an IAM-authorized API Gateway. Pair with hereya/aws-sqlite-db for per-app provisioning."
 visibility: public
 iac: cdk

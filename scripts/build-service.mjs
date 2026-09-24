@@ -25,7 +25,11 @@ const pins = existsSync(pinsPath) ? JSON.parse(readFileSync(pinsPath, "utf8")) :
 
 const NODE_ASSET = `node-${NODE_VERSION}-linux-arm64.tar.xz`;
 const NODE_URL = `https://nodejs.org/dist/${NODE_VERSION}/${NODE_ASSET}`;
-const LITESTREAM_ASSET = `litestream-${LITESTREAM_VERSION}-linux-arm64.tar.gz`;
+// 0.5.x release assets drop the `v` prefix (0.3.x: litestream-v0.3.14-…; 0.5.x: litestream-0.5.17-…).
+const LITESTREAM_ASSET_VERSION = /^v0\.[5-9]|^v[1-9]/.test(LITESTREAM_VERSION)
+  ? LITESTREAM_VERSION.replace(/^v/, "")
+  : LITESTREAM_VERSION;
+const LITESTREAM_ASSET = `litestream-${LITESTREAM_ASSET_VERSION}-linux-arm64.tar.gz`;
 const LITESTREAM_URL = `https://github.com/benbjohnson/litestream/releases/download/${LITESTREAM_VERSION}/${LITESTREAM_ASSET}`;
 
 function sha256(buf) {

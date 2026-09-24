@@ -94,7 +94,11 @@ node scripts/acceptance/kill-instance.mjs <stackName>             # terminate �
 node scripts/acceptance/kill-process.mjs <stackName>              # SIGKILL → systemd restart, no ASG event
 node scripts/acceptance/cut-network.mjs <stackName>               # SG swap → dead-man ALARM → restore → OK
 node scripts/acceptance/noisy-neighbor.mjs <stackName>            # flood one app → other app unaffected
+.toolchain/node/bin/node scripts/acceptance/restore-legacy-0-3.mjs <stackName>  # 0.3-format replica restored by the 0.5 service
 ```
+
+No-AWS variant of the last one (file:// replicas, in-process boot on the pinned 0.5 binary):
+`npm run ensure-litestream && .toolchain/node/bin/node scripts/acceptance/restore-legacy-0-3-local.mjs`.
 
 ## Ops runbook
 
@@ -119,6 +123,13 @@ node scripts/acceptance/noisy-neighbor.mjs <stackName>            # flood one ap
   `/admin/sync`) closes it and deletes the LOCAL file. The **S3 replica is retained** as the
   durable archive; deleting `s3://bucket/<appId>/` is a deliberate manual op. Recreating
   the row later restores the app from the replica (restore-before-first-query).
+- **Litestream 0.5.x (since 0.1.3; was 0.3.14)**: the generated `litestream.yml` uses the 0.5
+  schema — a global `snapshot: {interval, retention}` block (defaults 6h / 72h, i.e.
+  `litestreamRetention` = the restore window) and a single `replica:` per db. 0.5 parses config
+  non-strictly: the old replica-level `retention:` / `snapshot-interval:` keys would be silently
+  ignored (24h defaults). Existing 0.3-format replicas stay restorable (0.5 auto-detects them);
+  after the first 0.5 run new backups are written as LTX, so rolling back to 0.3 depends on
+  aged-out backups — upgrade in a quiet window. The upgrade rolls the VM once (service hash).
 - **Never** add S3 lifecycle rules or versioning to the replica bucket, and never mount the
   db files over the network — Litestream owns retention; only the Data API touches the files.
 - **Spot loss window**: ≈ the litestream sync interval (1s default) on hard kills; clean
