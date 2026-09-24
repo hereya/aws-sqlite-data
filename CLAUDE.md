@@ -50,9 +50,9 @@ runbook; this file is the working-agreement layer for agents.
    (Hereya passes the default as env, which overrides the constant — a test enforces equality).
    `amiId=latest` restores auto-resolution. **`npm run check:ami`** is the half that makes the pin
    safe: exit 1 when a newer AL2023 exists (or `--stack <FULL name>` finds the instance on neither
-   image), exit 2 — never 0 — when it cannot tell. The 0.1.1 pin is `ami-0390cc9c657024910`, the
-   image the production VM has run since 2026-07-07, so pinning alone rolls nothing; moving it is
-   a deliberate, announced release. With 8 and 9, only a new service or a bumped pin roll the VM.
+   image), exit 2 — never 0 — when it cannot tell. The 0.1.1 pin was `ami-0390cc9c657024910`, the
+   image the production VM had run since 2026-07-07, so pinning alone rolled nothing; 0.1.2 rolled it
+   to `ami-06f589fd2af7a9fc7` (AL2023 2026-09-18). Moving it is always a deliberate, announced release. With 8 and 9, only a new service or a bumped pin roll the VM.
 10. **One restore per db path, one litestream replicate process** (0.1.1, upstream 0.1.26/0.1.40).
     `Restorer` (`service/src/litestream/restore.ts`) shares an in-flight restore between callers
     (`ensureServed` and the registry reconcile used to race: "output path already exists" 503s).
