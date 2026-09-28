@@ -60,6 +60,8 @@ consumer Lambda ──SigV4──▶ API Gateway (HTTP API, IAM auth)
 Inputs (env/`-p`): `capabilityEnforce` (see hereyarc), `instanceType` (t4g.micro),
 `autoDelete`, `servicePort`, `sqlTimeoutMs`, `maxInflightPerApp`, `maxLiveWorkers`,
 `registryPollSeconds`, `litestreamSyncIntervalMs`, `litestreamRetention`,
+`litestreamL0Retention` / `litestreamL0RetentionCheckInterval` / `litestreamLevelIntervals`
+(housekeeping cadences, see below),
 `telegramBotTokenParam` (SSM SecureString *name*; a bare token or a JSON record with `bot_token`),
 `telegramChatId`, `amiId` (default = the pinned AL2023 arm64 image of eu-west-1; `latest` =
 auto-resolve at every deploy, which rolls the VM whenever AWS publishes).
@@ -130,6 +132,15 @@ No-AWS variant of the last one (file:// replicas, in-process boot on the pinned 
   ignored (24h defaults). Existing 0.3-format replicas stay restorable (0.5 auto-detects them);
   after the first 0.5 run new backups are written as LTX, so rolling back to 0.3 depends on
   aged-out backups — upgrade in a quiet window. The upgrade rolls the VM once (service hash).
+- **Housekeeping cadences (since 0.1.4)**: litestream 0.5 runs the L0 retention sweep and each
+  compaction level as FIXED per-database timers, written to or not, and every tick LISTs the
+  replica — so the S3 request bill scales with the NUMBER of databases, not with traffic. Its
+  built-in defaults (sweep 15s, levels 30s/5m/1h) come to ~9k LIST/day per database. The package
+  ships `l0-retention: 3h`, `l0-retention-check-interval: 30m`, levels `30m,2h,6h` (inputs
+  `litestreamL0Retention`, `litestreamL0RetentionCheckInterval`, `litestreamLevelIntervals`).
+  None of them moves the loss window (`sync-interval` does); slower compaction only means more
+  L0 files to replay on restore. The one DATA-losing combination — an `l0-retention` under 2x
+  the level-1 interval — makes the service refuse to boot.
 - **Never** add S3 lifecycle rules or versioning to the replica bucket, and never mount the
   db files over the network — Litestream owns retention; only the Data API touches the files.
 - **Spot loss window**: ≈ the litestream sync interval (1s default) on hard kills; clean

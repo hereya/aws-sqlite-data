@@ -1,4 +1,5 @@
 import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
+import { assertL0RetentionCoversL1, parseLevelIntervals } from "./config/durations.ts";
 
 export interface Config {
   port: number;
@@ -26,6 +27,13 @@ export interface Config {
   litestreamSyncIntervalMs: number;
   litestreamRetention: string;
   litestreamSnapshotInterval: string;
+  // Housekeeping cadences (see service/src/config/durations.ts). Fixed
+  // per-database timers that LIST the replica on every tick, written to or
+  // not — they are the S3 request bill, and they do not touch the loss window.
+  litestreamL0Retention: string;
+  litestreamL0RetentionCheckInterval: string;
+  /** Level 1..N compaction intervals, strictly increasing. */
+  litestreamLevelIntervals: string[];
   heartbeatEnabled: boolean;
   heartbeatPeriodSeconds: number;
   heartbeatDimension: string;
@@ -52,10 +60,24 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     return n;
   }
 
+  function durationEnv(name: string, fallback: string): string {
+    const raw = env[name];
+    if (raw === undefined || raw === "") return fallback;
+    const v = raw.trim();
+    if (!/^\d+(\.\d+)?(ms|s|m|h)$/.test(v)) {
+      throw new Error(`invalid ${name}: ${raw} (expected a litestream duration such as 5m, 30s, 1h)`);
+    }
+    return v;
+  }
+
   const registryMode = (env.REGISTRY_MODE ?? "ddb") as Config["registryMode"];
   if (registryMode !== "file" && registryMode !== "ddb") {
     throw new Error(`invalid REGISTRY_MODE: ${env.REGISTRY_MODE}`);
   }
+  const l0Retention = durationEnv("LITESTREAM_L0_RETENTION", "3h");
+  const levelIntervals = parseLevelIntervals(env.LITESTREAM_LEVEL_INTERVALS, ["30m", "2h", "6h"]);
+  assertL0RetentionCoversL1(l0Retention, levelIntervals);
+
   return {
     port: intEnv("PORT", 8080),
     dbDir: env.DB_DIR ?? "/var/lib/hereya/dbs",
@@ -82,6 +104,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     litestreamSyncIntervalMs: intEnv("LITESTREAM_SYNC_INTERVAL_MS", 1000),
     litestreamRetention: env.LITESTREAM_RETENTION ?? "72h",
     litestreamSnapshotInterval: env.LITESTREAM_SNAPSHOT_INTERVAL ?? "6h",
+    litestreamL0Retention: l0Retention,
+    litestreamL0RetentionCheckInterval: durationEnv("LITESTREAM_L0_RETENTION_CHECK_INTERVAL", "30m"),
+    litestreamLevelIntervals: levelIntervals,
     heartbeatEnabled: env.HEARTBEAT_ENABLED === "1" || env.HEARTBEAT_ENABLED === "true",
     heartbeatPeriodSeconds: intEnv("HEARTBEAT_PERIOD_SECONDS", 60),
     heartbeatDimension: env.HEARTBEAT_DIMENSION ?? "hereya-sqlite-data",

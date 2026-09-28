@@ -1,5 +1,5 @@
 name: hereya/aws-sqlite-data
-version: 0.1.3
+version: 0.1.4
 description: "Durable multi-tenant SQLite storage: S3-replicated (Litestream) per-app SQLite files served by an HTTP Data API on a self-healing EC2 Spot singleton, fronted by an IAM-authorized API Gateway. Pair with hereya/aws-sqlite-db for per-app provisioning."
 visibility: public
 iac: cdk
@@ -9,6 +9,18 @@ parameters:
     description: "When 'true', the Data API REQUIRES a valid x-hereya-capability token on every data route (missing or invalid -> 403 CAPABILITY_DENIED). 'false' (default) = warn mode: the token is validated when present but a request without one is allowed (logging cap_missing). Flip to 'true' once every caller mints or holds tokens (hereya/aws-sqlite-db provisions one per app)."
     mandatory: false
     default: "false"
+  litestreamL0RetentionCheckInterval:
+    description: "Cadence of the L0 retention sweep (default 30m; litestream ships 15s). Litestream runs this sweep as a FIXED per-database timer, whether or not the database was written to, and every tick LISTs the S3 replica: it is the largest line of the S3 request bill (measured on a production fleet: 16.5M ListBucket requests in 24 days vs 50k PutObject). It does NOT touch the loss window, which litestreamSyncIntervalMs alone carries; slowing it only makes a restore slightly slower."
+    mandatory: false
+    default: "30m"
+  litestreamL0Retention:
+    description: "How long an L0 file already compacted into L1 is kept in the replica before deletion (default 3h; litestream ships 5m). The ONE setting of this family that can cost DATA rather than money: a transaction lands in L0 first and may only be swept once merged into L1, so too short a retention deletes writes that were never copied anywhere else, silently. The service therefore REQUIRES at least 2x the level-1 interval and refuses to boot below it (equal is not enough: it races the compaction). Easy to get wrong because the two are tuned for opposite reasons: slowing compaction saves the money, and the retention is the one you forget to move with it."
+    mandatory: false
+    default: "3h"
+  litestreamLevelIntervals:
+    description: "Compaction intervals of levels 1..N, comma-separated, in increasing order (default 30m,2h,6h; litestream ships 30s,5m,1h). Same properties as litestreamL0RetentionCheckInterval: fixed per-database timers independent of writes, one LIST per tick, no effect on the loss window. Each level must be strictly slower than the previous one, or the service refuses to boot."
+    mandatory: false
+    default: "30m,2h,6h"
   amiId:
     description: "AMI of the database VM. Pinned by default to ami-06f589fd2af7a9fc7 (AL2023 kernel-6.1 arm64, eu-west-1), so that an ordinary deploy NEVER replaces the instance (a replacement = ~60s with no Data API). Bump PINNED_AMI_ID in lib/ami-pin.ts, or pass an id here, to move the OS deliberately; npm run check:ami says when a newer AL2023 exists. latest restores auto-resolution of the newest AL2023 arm64 image at every deploy (and with it the surprise replacement); outside eu-west-1, latest or a region-local id is required."
     mandatory: false

@@ -67,6 +67,14 @@ runbook; this file is the working-agreement layer for agents.
     `service/test/unit/litestream-config.test.ts` locks the output and parses it with the real
     binary; `scripts/acceptance/restore-legacy-0-3{,-local}.mjs` prove 0.5 restores a 0.3 replica.
 
+12. **Housekeeping cadences are explicit, and `l0-retention` ≥ 2x the level-1 interval** (0.1.4,
+    upstream 0.1.x). `l0-retention`, `l0-retention-check-interval` and `levels:` are emitted
+    by `buildConfig`, never left to litestream defaults (15s/30s/5m/1h = one LIST per tick per
+    db, the S3 request bill). `service/src/config/durations.ts` refuses to boot on a retention
+    under 2x L1 (data loss, silent) or non-increasing levels. `litestream-cadences.test.ts`
+    asserts what the REAL daemon reports it started — non-strict parsing means a mere parse
+    proves nothing.
+
 ## Working on it
 
 - `npm test` = unit + integration (in-process boots, real litestream with `file://` replicas)
