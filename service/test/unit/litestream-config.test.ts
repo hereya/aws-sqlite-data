@@ -7,38 +7,23 @@
 // dilaya/aws-sqlite-data 0.1.4.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { fileURLToPath } from "node:url";
-import { loadConfig } from "../../src/config.ts";
-import { Litestream } from "../../src/litestream.ts";
-
-const litestreamBin = fileURLToPath(new URL("../../../.toolchain/litestream", import.meta.url));
-const haveLitestream = existsSync(litestreamBin);
-
-function makeLitestream(): Litestream {
-  return new Litestream(
-    loadConfig({
-      REPLICA_BASE_URL: "file:///replicas",
-      LITESTREAM_SYNC_INTERVAL_MS: "1000",
-      LITESTREAM_RETENTION: "72h",
-      LITESTREAM_SNAPSHOT_INTERVAL: "6h",
-    } as NodeJS.ProcessEnv),
-  );
-}
-
-const APPS = [
-  { appId: "app-1", dbPath: "/dbs/app-1/app.db" },
-  { appId: "app-2", dbPath: "/dbs/app-2/app.db" },
-];
+import { APPS, haveLitestream, litestreamBin, makeLitestream } from "./litestream-helpers.ts";
 
 test("buildConfig emits the 0.5.x schema (global snapshot, single replica)", () => {
   const yml = makeLitestream().buildConfig(APPS);
   assert.equal(
     yml,
     [
+      "l0-retention: 3h",
+      "l0-retention-check-interval: 30m",
+      "levels:",
+      "  - interval: 30m",
+      "  - interval: 2h",
+      "  - interval: 6h",
       "snapshot:",
       "  interval: 6h",
       "  retention: 72h",

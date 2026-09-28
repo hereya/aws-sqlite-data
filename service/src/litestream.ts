@@ -69,7 +69,18 @@ export class Litestream {
     // replica-level `retention:`/`snapshot-interval:` keys are silently
     // IGNORED by 0.5.x (config parsing is non-strict), so keeping them would
     // shrink the restore window to the 24h defaults without any error.
+    // Housekeeping cadences are declared explicitly rather than left to the
+    // built-in defaults: they are fixed per-database timers that LIST the
+    // replica on every tick regardless of whether the database was written to,
+    // and they — not the writes — are what the S3 request bill is made of.
+    // They do NOT affect the loss window (that is `sync-interval`, per-replica
+    // below); slowing them only delays the merge of L0 files, i.e. costs
+    // restore speed.
     const lines: string[] = [
+      `l0-retention: ${this.cfg.litestreamL0Retention}`,
+      `l0-retention-check-interval: ${this.cfg.litestreamL0RetentionCheckInterval}`,
+      "levels:",
+      ...this.cfg.litestreamLevelIntervals.map((i) => `  - interval: ${i}`),
       "snapshot:",
       `  interval: ${this.cfg.litestreamSnapshotInterval}`,
       `  retention: ${this.cfg.litestreamRetention}`,
