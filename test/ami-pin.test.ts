@@ -177,9 +177,10 @@ test("the pin is measured against the parameter it was taken from", () => {
   assert.equal(PINNED_AMI_REGION, "eu-west-1");
 });
 
-test("the pin moves only on purpose — 0.1.2 is the dated OS roll", () => {
+test("the pin moves only on purpose — 0.1.5 is the dated OS roll", () => {
   // 0.1.1 pinned the image already in service (ami-0390cc9c657024910) so that
-  // introducing the pin rolled nothing. 0.1.2 is the deliberate roll to the
-  // AL2023 of 2026-09-18. Changing this line is changing the production OS.
-  assert.equal(PINNED_AMI_ID, "ami-06f589fd2af7a9fc7");
+  // introducing the pin rolled nothing. 0.1.2 rolled to the AL2023 of
+  // 2026-09-18, 0.1.5 to the AL2023 of 2026-10-16. Changing this line is
+  // changing the production OS.
+  assert.equal(PINNED_AMI_ID, "ami-0e942ce8509bb33b6");
 });
