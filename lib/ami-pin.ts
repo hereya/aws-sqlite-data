@@ -18,8 +18,9 @@
 export const PINNED_AMI_REGION = "eu-west-1";
 
 /**
- * AL2023, kernel 6.1, arm64, eu-west-1: `al2023-ami-2023.12.20260918.0`,
- * taken from a fresh `npm run check:ami` on 2026-09-24 (0.1.2). Previous pin:
+ * AL2023, kernel 6.1, arm64, eu-west-1: `al2023-ami-2023.12.20261016.0`,
+ * taken from a fresh `npm run check:ami` on 2026-10-18 (0.1.5). Previous pins:
+ * `ami-06f589fd2af7a9fc7` (`al2023-ami-2023.12.20260918.0`, 0.1.2) and
  * `ami-0390cc9c657024910`, the image the production VM had run since 2026-07-07,
  * pinned as-is in 0.1.1 so that introducing the pin rolled nothing.
  *
@@ -29,7 +30,7 @@ export const PINNED_AMI_REGION = "eu-west-1";
  * announced act, never a side effect. Take the id from a FRESH `check:ami` —
  * Amazon has republished within a day.
  */
-export const PINNED_AMI_ID = "ami-06f589fd2af7a9fc7";
+export const PINNED_AMI_ID = "ami-0e942ce8509bb33b6";
 
 /**
  * The SSM public parameter the pin is measured against. It MUST stay the same
