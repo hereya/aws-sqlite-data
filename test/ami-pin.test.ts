@@ -182,5 +182,5 @@ test("the pin moves only on purpose — 0.1.5 is the dated OS roll", () => {
   // introducing the pin rolled nothing. 0.1.2 rolled to the AL2023 of
   // 2026-09-18, 0.1.5 to the AL2023 of 2026-10-16. Changing this line is
   // changing the production OS.
-  assert.equal(PINNED_AMI_ID, "ami-0e942ce8509bb33b6");
+  assert.equal(PINNED_AMI_ID, "ami-05722456813fabe7c");
 });
